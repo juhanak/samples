@@ -112,11 +112,11 @@
     <None Include="MotionVectors_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="avcodec-56.dll" />
-    <Content Include="avdevice-56.dll" />
-    <Content Include="avfilter-5.dll" />
-    <Content Include="avformat-56.dll" />
-    <Content Include="avutil-54.dll" />
+    <Content Include="..\..\ffmpeg\Build\Windows10\x86\bin\avcodec-56.dll" />
+    <Content Include="..\..\ffmpeg\Build\Windows10\x86\bin\avdevice-56.dll" />
+    <Content Include="..\..\ffmpeg\Build\Windows10\x86\bin\avfilter-5.dll" />
+    <Content Include="..\..\ffmpeg\Build\Windows10\x86\bin\avformat-56.dll" />
+    <Content Include="..\..\ffmpeg\Build\Windows10\x86\bin\avutil-54.dll" />
     <Content Include="Properties\Default.rd.xml" />
     <Content Include="Assets\LockScreenLogo.scale-200.png" />
     <Content Include="Assets\SplashScreen.scale-200.png" />
