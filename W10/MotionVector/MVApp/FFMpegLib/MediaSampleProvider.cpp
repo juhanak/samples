@@ -197,16 +197,15 @@ bool MediaSampleProvider::ProcessNextSample()
 HRESULT MediaSampleProvider::DecodeAVPacket( AVPacket* avPacket)
 {
 	int frameComplete = 0;
+	
 	if (avcodec_decode_video2(m_pAvCodecCtx, m_pAvFrame, &frameComplete, avPacket) < 0)
 	{
 		DebugMessage(L"GetNextSample reaching EOF\n");
 		frameComplete = 1;
 	}
-
-	int i;
+	
 	AVFrameSideData *sd;
 	video_frame_count++;
-	wchar_t szBuff[200];
 	sd = av_frame_get_side_data(m_pAvFrame, AV_FRAME_DATA_MOTION_VECTORS);
 	if (sd) {
 		_frameSideData = sd;
