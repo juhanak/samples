@@ -78,7 +78,7 @@ namespace MotionVectors
 
         private void OnStart(object sender, RoutedEventArgs e)
         {
-            _sdk.ReadPackets(_readStream,_logFile);
+            _sdk.ReadMotionFrames(_readStream,_logFile);
         }
     }
 }

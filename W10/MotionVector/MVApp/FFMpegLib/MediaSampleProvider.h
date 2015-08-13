@@ -55,7 +55,7 @@ namespace FFmpegInterop
 		AVFrameSideData *_frameSideData;
 
 	private:
-		void storeVecToFile(StorageFile ^file, Windows::Foundation::Collections::IIterable<Platform::String^>^ lines);
+		void storeVectorsToFile(StorageFile ^file, Windows::Foundation::Collections::IIterable<Platform::String^>^ lines);
 		std::queue<AVPacket> m_packetQueue;
 		int m_streamIndex;
 		AVFrame* m_pAvFrame;

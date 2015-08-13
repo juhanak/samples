@@ -100,6 +100,10 @@ void MediaSampleProvider::SetCurrentStreamIndex(int streamIndex)
 	}
 }
 
+/// <summary>
+/// Gets motion vectors from the frameside data and stores them to a file
+/// </summary>
+/// <returns></returns>
 void MediaSampleProvider::writeFrameSideData(StorageFile ^file)
 {
 	wchar_t szBuff[200];
@@ -122,21 +126,24 @@ void MediaSampleProvider::writeFrameSideData(StorageFile ^file)
 
 			if (vec->Size > 1000)
 			{
-				storeVecToFile(file, vec);
+				storeVectorsToFile(file, vec);
 				vec->Clear();
 			}
 		}
 		
 		if (vec->Size > 0)
 		{
-			storeVecToFile(file, vec);
+			storeVectorsToFile(file, vec);
 			vec->Clear();
 		}
 	}
 }
 
-
-void MediaSampleProvider::storeVecToFile(StorageFile ^file, Windows::Foundation::Collections::IIterable<Platform::String^>^ lines)
+/// <summary>
+/// Stores the list of motion vectors into a file
+/// </summary>
+/// <returns></returns>
+void MediaSampleProvider::storeVectorsToFile(StorageFile ^file, Windows::Foundation::Collections::IIterable<Platform::String^>^ lines)
 {
 	asyncOperationCompleted = false;
 	IAsyncAction^ Action = Windows::Storage::FileIO::AppendLinesAsync(file, lines);
@@ -149,7 +156,6 @@ void MediaSampleProvider::storeVecToFile(StorageFile ^file, Windows::Foundation:
 	while (false == asyncOperationCompleted)
 		CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessOneIfPresent);
 }
-
 
 bool MediaSampleProvider::ProcessNextSample()
 {
@@ -192,8 +198,10 @@ bool MediaSampleProvider::ProcessNextSample()
 	return SUCCEEDED(hr) ? true : false;
 }
 
-
-
+/// <summary>
+/// Decodes AVPacket and tries to extract frame side data from it
+/// </summary>
+/// <returns></returns>
 HRESULT MediaSampleProvider::DecodeAVPacket( AVPacket* avPacket)
 {
 	int frameComplete = 0;

@@ -48,11 +48,13 @@ namespace FFmpegLib
 	{
 	public:
 		static FFmpegSDK^ Initialize();
-		void ReadPackets(IRandomAccessStream^ stream, StorageFile ^file);
+		
+		// Reads motion frames from given stream and stores to a file
+		void ReadMotionFrames(IRandomAccessStream^ stream, StorageFile ^file);
 
 		property int FramesProcessed {
 			int get() {
-				return framesProcessed;
+				return m_framesProcessed;
 			}
 		}
 
@@ -70,15 +72,14 @@ namespace FFmpegLib
 	private:
 		IStream* m_fileStreamData;
 		unsigned char* m_fileStreamBuffer;
-		TimeSpan mediaDuration;
-
-		AVIOContext* avIOCtx;
-		AVFormatContext* avFormatCtx;
-		AVCodecContext* avVideoCodecCtx;
-		int videoStreamIndex;
-		MediaSampleProvider^ videoSampleProvider;
-		VideoStreamDescriptor^ videoStreamDescriptor;
-		int framesProcessed;
+		TimeSpan m_mediaDuration;
+		AVIOContext* m_avIOCtx;
+		AVFormatContext* m_avFormatCtx;
+		AVCodecContext* m_avVideoCodecCtx;
+		int m_videoStreamIndex;
+		MediaSampleProvider^ m_videoSampleProvider;
+		VideoStreamDescriptor^ m_videoStreamDescriptor;
+		int m_framesProcessed;
 
 	};
 }

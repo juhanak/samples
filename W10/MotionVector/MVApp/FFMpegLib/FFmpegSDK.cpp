@@ -32,17 +32,17 @@ static int FileStreamRead(void* ptr, uint8_t* buf, int bufSize);
 static int64_t FileStreamSeek(void* ptr, int64_t pos, int whence);
 
 FFmpegSDK::FFmpegSDK()
-	: avIOCtx(nullptr)
-	, avFormatCtx(nullptr)
-	, avVideoCodecCtx(nullptr)
-	, videoStreamIndex(AVERROR_STREAM_NOT_FOUND)
+	: m_avIOCtx(nullptr)
+	, m_avFormatCtx(nullptr)
+	, m_avVideoCodecCtx(nullptr)
+	, m_videoStreamIndex(AVERROR_STREAM_NOT_FOUND)
 	, m_fileStreamData(nullptr)
 	, m_fileStreamBuffer(nullptr)
 {
 	av_register_all();
 }
 
-void FFmpegSDK::ReadPackets(IRandomAccessStream^ stream, StorageFile ^file)
+void FFmpegSDK::ReadMotionFrames(IRandomAccessStream^ stream, StorageFile ^file)
 {
 	HRESULT hr = CreateMediaStreamSource(stream);
 
@@ -51,10 +51,10 @@ void FFmpegSDK::ReadPackets(IRandomAccessStream^ stream, StorageFile ^file)
 		auto workItem = ref new WorkItemHandler(
 			[this, file](IAsyncAction^ workItem)
 		{
-			while (videoSampleProvider->ProcessNextSample() != false)
+			while (m_videoSampleProvider->ProcessNextSample() != false)
 			{
-				videoSampleProvider->writeFrameSideData(file);
-				framesProcessed++;
+				m_videoSampleProvider->writeFrameSideData(file);
+				m_framesProcessed++;
 			}
 		});
 
@@ -93,8 +93,8 @@ HRESULT FFmpegSDK::CreateMediaStreamSource(IRandomAccessStream^ stream)
 
 	if (SUCCEEDED(hr))
 	{
-		avIOCtx = avio_alloc_context(m_fileStreamBuffer, FILESTREAMBUFFERSZ, 0, m_fileStreamData, FileStreamRead, 0, FileStreamSeek);
-		if (avIOCtx == nullptr)
+		m_avIOCtx = avio_alloc_context(m_fileStreamBuffer, FILESTREAMBUFFERSZ, 0, m_fileStreamData, FileStreamRead, 0, FileStreamSeek);
+		if (m_avIOCtx == nullptr)
 		{
 			hr = E_OUTOFMEMORY;
 		}
@@ -102,8 +102,8 @@ HRESULT FFmpegSDK::CreateMediaStreamSource(IRandomAccessStream^ stream)
 
 	if (SUCCEEDED(hr))
 	{
-		avFormatCtx = avformat_alloc_context();
-		if (avFormatCtx == nullptr)
+		m_avFormatCtx = avformat_alloc_context();
+		if (m_avFormatCtx == nullptr)
 		{
 			hr = E_OUTOFMEMORY;
 		}
@@ -111,12 +111,12 @@ HRESULT FFmpegSDK::CreateMediaStreamSource(IRandomAccessStream^ stream)
 
 	if (SUCCEEDED(hr))
 	{
-		avFormatCtx->pb = avIOCtx;
-		avFormatCtx->flags |= AVFMT_FLAG_CUSTOM_IO;
+		m_avFormatCtx->pb = m_avIOCtx;
+		m_avFormatCtx->flags |= AVFMT_FLAG_CUSTOM_IO;
 
 		// Open media file using custom IO setup above instead of using file name. Opening a file using file name will invoke fopen C API call that only have
 		// access within the app installation directory and appdata folder. Custom IO allows access to file selected using FilePicker dialog.
-		if (avformat_open_input(&avFormatCtx, "", NULL, NULL) < 0)
+		if (avformat_open_input(&m_avFormatCtx, "", NULL, NULL) < 0)
 		{
 			hr = E_FAIL; // Error opening file
 		}
@@ -134,25 +134,25 @@ HRESULT FFmpegSDK::CreateVideoStreamDescriptor()
 {
 	VideoEncodingProperties^ videoProperties;
 
-	videoProperties = VideoEncodingProperties::CreateUncompressed(MediaEncodingSubtypes::Nv12, avVideoCodecCtx->width, avVideoCodecCtx->height);
-	videoSampleProvider = ref new MediaSampleProvider(m_pReader, avFormatCtx, avVideoCodecCtx);
+	videoProperties = VideoEncodingProperties::CreateUncompressed(MediaEncodingSubtypes::Nv12, m_avVideoCodecCtx->width, m_avVideoCodecCtx->height);
+	m_videoSampleProvider = ref new MediaSampleProvider(m_pReader, m_avFormatCtx, m_avVideoCodecCtx);
 
 	// Detect the correct framerate
-	if (avVideoCodecCtx->framerate.num != 0 || avVideoCodecCtx->framerate.den != 1)
+	if (m_avVideoCodecCtx->framerate.num != 0 || m_avVideoCodecCtx->framerate.den != 1)
 	{
-		videoProperties->FrameRate->Numerator = avVideoCodecCtx->framerate.num;
-		videoProperties->FrameRate->Denominator = avVideoCodecCtx->framerate.den;
+		videoProperties->FrameRate->Numerator = m_avVideoCodecCtx->framerate.num;
+		videoProperties->FrameRate->Denominator = m_avVideoCodecCtx->framerate.den;
 	}
-	else if (avFormatCtx->streams[videoStreamIndex]->avg_frame_rate.num != 0 || avFormatCtx->streams[videoStreamIndex]->avg_frame_rate.den != 0)
+	else if (m_avFormatCtx->streams[m_videoStreamIndex]->avg_frame_rate.num != 0 || m_avFormatCtx->streams[m_videoStreamIndex]->avg_frame_rate.den != 0)
 	{
-		videoProperties->FrameRate->Numerator = avFormatCtx->streams[videoStreamIndex]->avg_frame_rate.num;
-		videoProperties->FrameRate->Denominator = avFormatCtx->streams[videoStreamIndex]->avg_frame_rate.den;
+		videoProperties->FrameRate->Numerator = m_avFormatCtx->streams[m_videoStreamIndex]->avg_frame_rate.num;
+		videoProperties->FrameRate->Denominator = m_avFormatCtx->streams[m_videoStreamIndex]->avg_frame_rate.den;
 	}
 
-	videoProperties->Bitrate = avVideoCodecCtx->bit_rate;
-	videoStreamDescriptor = ref new VideoStreamDescriptor(videoProperties);
+	videoProperties->Bitrate = m_avVideoCodecCtx->bit_rate;
+	m_videoStreamDescriptor = ref new VideoStreamDescriptor(videoProperties);
 
-	return (videoStreamDescriptor != nullptr && videoSampleProvider != nullptr) ? S_OK : E_OUTOFMEMORY;
+	return (m_videoStreamDescriptor != nullptr && m_videoSampleProvider != nullptr) ? S_OK : E_OUTOFMEMORY;
 }
 
 HRESULT FFmpegSDK::InitFFmpegContext()
@@ -161,7 +161,7 @@ HRESULT FFmpegSDK::InitFFmpegContext()
 
 	if (SUCCEEDED(hr))
 	{
-		if (avformat_find_stream_info(avFormatCtx, NULL) < 0)
+		if (avformat_find_stream_info(m_avFormatCtx, NULL) < 0)
 		{
 			hr = E_FAIL; // Error finding info
 		}
@@ -169,7 +169,7 @@ HRESULT FFmpegSDK::InitFFmpegContext()
 
 	if (SUCCEEDED(hr))
 	{
-		m_pReader = ref new FFmpegReader(avFormatCtx);
+		m_pReader = ref new FFmpegReader(m_avFormatCtx);
 		if (m_pReader == nullptr)
 		{
 			hr = E_OUTOFMEMORY;
@@ -181,25 +181,26 @@ HRESULT FFmpegSDK::InitFFmpegContext()
 	{
 		// Find the video stream and its decoder
 		AVCodec* avVideoCodec = nullptr;
-		videoStreamIndex = av_find_best_stream(avFormatCtx, AVMEDIA_TYPE_VIDEO, -1, -1, &avVideoCodec, 0);
-		if (videoStreamIndex != AVERROR_STREAM_NOT_FOUND && avVideoCodec)
+		m_videoStreamIndex = av_find_best_stream(m_avFormatCtx, AVMEDIA_TYPE_VIDEO, -1, -1, &avVideoCodec, 0);
+		if (m_videoStreamIndex != AVERROR_STREAM_NOT_FOUND && avVideoCodec)
 		{
 			// FFmpeg identifies album/cover art from a music file as a video stream
 			// Avoid creating unnecessarily video stream from this album/cover art
-			if (avFormatCtx->streams[videoStreamIndex]->disposition == AV_DISPOSITION_ATTACHED_PIC)
+			if (m_avFormatCtx->streams[m_videoStreamIndex]->disposition == AV_DISPOSITION_ATTACHED_PIC)
 			{
-				videoStreamIndex = AVERROR_STREAM_NOT_FOUND;
+				m_videoStreamIndex = AVERROR_STREAM_NOT_FOUND;
 				avVideoCodec = nullptr;
 			}
 			else
 			{
+				//Tells codec to export motion frames
 				AVDictionary *opts = NULL;
 				av_dict_set(&opts, "flags2", "+export_mvs", 0);
 
-				avVideoCodecCtx = avFormatCtx->streams[videoStreamIndex]->codec;
-				if (avcodec_open2(avVideoCodecCtx, avVideoCodec, &opts) < 0)
+				m_avVideoCodecCtx = m_avFormatCtx->streams[m_videoStreamIndex]->codec;
+				if (avcodec_open2(m_avVideoCodecCtx, avVideoCodec, &opts) < 0)
 				{
-					avVideoCodecCtx = nullptr;
+					m_avVideoCodecCtx = nullptr;
 					hr = E_FAIL; // Cannot open the video codec
 				}
 				else
@@ -208,10 +209,10 @@ HRESULT FFmpegSDK::InitFFmpegContext()
 					hr = CreateVideoStreamDescriptor();
 					if (SUCCEEDED(hr))
 					{
-						hr = videoSampleProvider->AllocateResources();
+						hr = m_videoSampleProvider->AllocateResources();
 						if (SUCCEEDED(hr))
 						{
-							m_pReader->SetVideoStream(videoStreamIndex, videoSampleProvider);
+							m_pReader->SetVideoStream(m_videoStreamIndex, m_videoSampleProvider);
 						}
 
 					}
@@ -223,7 +224,7 @@ HRESULT FFmpegSDK::InitFFmpegContext()
 	if (SUCCEEDED(hr))
 	{
 		// Convert media duration from AV_TIME_BASE to TimeSpan unit
-		mediaDuration = { LONGLONG(avFormatCtx->duration * 10000000 / double(AV_TIME_BASE)) };
+		m_mediaDuration = { LONGLONG(m_avFormatCtx->duration * 10000000 / double(AV_TIME_BASE)) };
 	}
 	return hr;
 }
