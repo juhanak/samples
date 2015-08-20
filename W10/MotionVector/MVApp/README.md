@@ -10,3 +10,5 @@ Getting a compatible build of FFmpeg is required for this to work. FFmpeg librar
 Expectation is that ffmpeg libraries and headers locate next to MVApp folder. This should automatically happen if the project is recursively cloned. 
 The project is tested with "Windows 10 x86" builds. And it has dependency to FFmpeg dlls that locate "..\..\ffmpeg\Build\Windows10\x86\bin" relative to the project. If x64 libraries are built then then one needs to modify project files a little bit that required headers and libs are found. 
 
+More information on the project available on this page:
+http://juhana.cloudapp.net/?p=300
