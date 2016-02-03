@@ -1,2 +1,2 @@
 # samples
-Repository for small sample projects
+Repository for small sample projects..
